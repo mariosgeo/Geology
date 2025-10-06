@@ -115,7 +115,31 @@ The notebook generates several outputs:
 4. **Uncertainty Maps**: Confidence levels of predictions
 5. **3D VTK Models**: For visualization in ParaView or similar tools
 
-## 🗂️ Data
+## 🗂️ Data Files
+
+### Essential Data Files
+
+The repository includes several essential data files required for running the demonstrations:
+
+| File | Description | Size | Purpose |
+|------|-------------|------|---------|
+| `geotop.npy` | 3D geological model data | ~Several MB | Main 3D geological volume for inpainting |
+| `top_layer.gpkg` | Geological layer data | Variable | GeoPackage with borehole and geological information |
+
+### Data Loading in Code
+
+The notebook automatically loads these files:
+
+```python
+# Load 3D geological model
+geotop = np.load('geotop.npy')
+
+# Load geological layer data  
+import geopandas as gpd
+data = gpd.read_file('top_layer.gpkg')
+```
+
+**Note**: These data files are essential for reproducing the results and must be present in the repository root directory.
 
 ### Geological Classifications
 
