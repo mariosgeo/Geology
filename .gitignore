@@ -128,11 +128,24 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Scientific computing
-*.npy
+# Scientific computing - exclude large data files
+# Essential small data files are kept (geotop.npy, top_layer.gpkg)
 *.npz
 *.h5
 *.hdf5
+
+# Exclude large VTK files (>20MB)
+geo_vtk/data/**/*.vtk
+geo_vtk/data/**/*.npy
+
+# Exclude specific large numpy files
+geo_vtk/data/3d_data/bs_small_*.npy
+geo_vtk/data/3d_data/mosaic_5_focus.npy
+
+# Exclude temporary numpy files
+**/temp_*.npy
+**/tmp_*.npy
+**/cache_*.npy
 
 # Temporary files
 *.tmp
