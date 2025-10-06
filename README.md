@@ -1,4 +1,4 @@
-# Geology - Machine Learning Inpainting for Geological Models
+# Geology - Biharmonic Inpainting for Geological Models
 
 This repository contains a Python implementation for geological model reconstruction using machine learning inpainting techniques. The project focuses on filling gaps in geological data using biharmonic inpainting and one-vs-all classification methods.
 
