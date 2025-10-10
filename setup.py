@@ -62,7 +62,7 @@ EXTRAS_REQUIRE['all'] = list(set(sum(EXTRAS_REQUIRE.values(), [])))
 
 setup(
     # Package metadata
-    name='Geology',
+    name="geology-Marios-toolkit",
     version=__version__,
     
     # Package description
