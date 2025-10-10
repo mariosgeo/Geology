@@ -1,6 +1,9 @@
 # Geology - Biharmonic Inpainting for Geological Models
 
-This repository contains a Python implementation for geological model reconstruction using machine learning inpainting techniques. The project focuses on filling gaps in geological data using biharmonic inpainting and one-vs-all classification methods.
+This repository contains a Python implementation for geological model reconstruction using inpainting techniques. The project focuses on filling gaps in geological data using biharmonic inpainting and one-vs-all classification methods.
+
+
+
 
 ## 🎯 Overview
 
@@ -106,6 +109,20 @@ The method uses anisotropic weights to account for geological principles:
 - **Lower horizontal weight**: Allows lateral geological variation
 
 ## 📈 Results
+
+The methodology successfully reconstructs geological models from sparse borehole data with high accuracy. The following figures demonstrate key results:
+
+### Figure 4: Geological Model Reconstruction
+![Geological Model Reconstruction](images/figure_4.svg)
+
+*This figure shows the step-by-step process of geological model reconstruction using biharmonic inpainting. The method effectively interpolates between sparse borehole data to create continuous geological boundaries while preserving structural features.*
+
+### Figure 6: Validation and Uncertainty Analysis  
+![Validation and Uncertainty Analysis](images/figure_6.svg)
+
+*This figure demonstrates the validation approach using held-out boreholes and uncertainty quantification. The confusion matrix shows high classification accuracy, while uncertainty maps highlight areas where predictions are less confident.*
+
+### Output Files
 
 The notebook generates several outputs:
 
