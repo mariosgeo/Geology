@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/gridder;${workspaceFolder}/geo_vtk/src"
+            }
+        },
+        {
+            "name": "Python: Jupyter Notebook",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "jupyter",
+            "args": ["notebook", "${file}"],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder};${workspaceFolder}/gridder;${workspaceFolder}/geo_vtk/src"
+            }
+        }
+    ]
+}

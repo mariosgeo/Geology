@@ -4,6 +4,7 @@ Created on Fri Aug 23 14:59:51 2019
 
 @author: karaouli
 """
+from email.mime import image
 import sys
 import numpy as np
 from matplotlib import path
@@ -11,6 +12,12 @@ import pandas as pd
 from skimage.restoration import inpaint
 import matplotlib.pyplot as plt
 import os
+from scipy.ndimage import zoom
+from matplotlib import rcParams
+import matplotlib.patches as mpatches
+from sklearn import metrics
+from matplotlib.path import Path
+from matplotlib import ticker
 #import 
 
 
@@ -58,6 +65,7 @@ class Geo_Gridder:
         self.bs=[] # the gridded data ouput
         self.count=[]
         # self.bs2=[]
+        self.uncertainty_data=[] # uncertainty model at the prediction points
         
         return
         
@@ -429,8 +437,90 @@ class Geo_Gridder:
         self.prediction_data=ee    
         
         return
+    
+    def make_mask(self,basis):
+        mask = np.ones_like(basis)
+        mask[np.isfinite(basis)] = 0
+        #plt.imshow(mask)
+        return mask 
 
 
+    def weighted_inpaint_biharmonic(self,image, mask, x_weight=1.0, y_weight=1.0):
+        image[np.isnan(image)] = 0  # Replace NaNs with zeros for inpainting
+        #mask = make_mask(image)  # Create a mask where the image is NaN
+        # Compute zoom factors (inverse of weights)
+        zoom_factors = [y_weight, x_weight]
+        # Rescale image and mask
+        image_scaled = zoom(image, zoom_factors, order=1)
+        mask_scaled = zoom(mask, zoom_factors, order=0)
+        # Inpaint on the scaled image
+        inpainted_scaled = inpaint.inpaint_biharmonic(image_scaled, mask_scaled, channel_axis=None)
+        # Rescale back to original shape
+        inpainted = zoom(inpainted_scaled, [1/y_weight, 1/x_weight], order=1)
+        # Crop to original shape (in case of rounding)
+        inpainted = inpainted[:image.shape[0], :image.shape[1]]
+        return inpainted
+    
+    def weighted_inpaint_biharmonic_3d(self,image, mask, x_weight=1.0, y_weight=1.0, z_weight=1.0):
+        image[np.isnan(image)] = 0  # Replace NaNs with zeros for inpainting
+        
+        # Compute zoom factors (inverse of weights)
+        zoom_factors = [z_weight, y_weight, x_weight]
+        
+        # Rescale image and mask
+        image_scaled = zoom(image, zoom_factors, order=1)
+        mask_scaled = zoom(mask, zoom_factors, order=0)
+        
+        # Inpaint on the scaled image
+        inpainted_scaled = inpaint.inpaint_biharmonic(image_scaled, mask_scaled, channel_axis=None)
+        
+        # Rescale back to original shape
+        inpainted = zoom(inpainted_scaled, [1/z_weight, 1/y_weight, 1/x_weight], order=1)
+        
+        # Crop to original shape (in case of rounding)
+        inpainted = inpainted[:image.shape[0], :image.shape[1], :image.shape[2]]
+
+        return inpainted
+
+    def one_vs_all(self,image=None, x_weight=1.0, y_weight=3.0,external_polygon=None):
+        
+        if image is None:
+            image=self.bs
+        else:
+            self.bs=image
+        
+        # find here unique labels in the image
+        uni_class=np.unique(image.ravel()[~np.isnan(image.ravel())])
+        # for every unique label, create a mask and inpaint
+        del2=np.zeros((image.shape[0],image.shape[1],len(uni_class)))
+        for i, label in enumerate(uni_class):
+            #make binary        
+            ee = np.float64(np.where(image.copy() == label, 1, 0))
+
+            del2[:,:,i] = self.weighted_inpaint_biharmonic(ee.copy(), self.make_mask(image), x_weight=x_weight, y_weight=y_weight)
+
+        #normalize values
+        del3=np.zeros_like(del2)
+        tmp=np.sum(del2,axis=2)
+        for i in range(0,del3.shape[2]):
+            del3[:,:,i]=del2[:,:,i]/tmp
+    
+        
+        del4=np.argmax(del3,axis=2)  
+
+        #map back to actual classes
+        inverse_value_map = {}
+        for i, label in enumerate(uni_class):
+            inverse_value_map[i] = label        
+        vectorized_inverse_map = np.vectorize(inverse_value_map.get)
+        del4 = vectorized_inverse_map(del4)
+        # calculate percentage of uncertainty
+        # del3 contains the probabilities for each class    
+        del_perc=100-100*np.max(del3,axis=2) 
+        self.prediction_data = del4
+        self.uncertainty_data = del_perc
+
+        return 
 
     def plot_2D(self, output_name, validation=None, show=True):
         """
@@ -511,4 +601,300 @@ class Geo_Gridder:
             plt.savefig(output_name)
             plt.close()
         return 
+
+    def one_vs_all_3d(self,image=None, x_weight=1.0, y_weight=1.0, z_weight=1.0,external_polygon=None):
         
+        if image is None:
+            image=self.bs
+        else:
+            self.bs=image
+        # find here unique labels in the image
+        uni_class=np.unique(image.ravel()[~np.isnan(image.ravel())])
+        # for every unique label, create a mask and inpaint
+        del2=np.zeros((image.shape[0],image.shape[1],image.shape[2],len(uni_class)))
+        for i, label in enumerate(uni_class):
+            #make binary        
+            ee = np.float64(np.where(image.copy() == label, 1, 0))
+
+            del2[:,:,:,i] = self.weighted_inpaint_biharmonic_3d(ee.copy(), self.make_mask(image), x_weight=x_weight, y_weight=y_weight,z_weight=z_weight)
+
+        #normalize values
+        del3=np.zeros_like(del2)
+        tmp=np.sum(del2,axis=3)
+        for i in range(0,del3.shape[3]):
+            del3[:,:,:,i]=del2[:,:,:,i]/tmp
+    
+        
+        del4=np.argmax(del3,axis=3)  
+
+        #map back to actual classes
+        inverse_value_map = {}
+        for i, label in enumerate(uni_class):
+            inverse_value_map[i] = label        
+        vectorized_inverse_map = np.vectorize(inverse_value_map.get)
+        del4 = vectorized_inverse_map(del4)
+        # calculate percentage of uncertainty
+        # del3 contains the probabilities for each class    
+        del_perc=100-100*np.max(del3,axis=3) 
+        self.prediction_data = del4
+        self.uncertainty_data = del_perc
+        return         
+    
+    
+
+    def plot_model(self, cmap='viridis',filename='model.pdf',labels=np.arange(0,100,1)):
+        fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=False)
+
+        # First subplot
+        im1 = axes[0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9)
+        axes[0].set_ylabel('Depth (m)')
+        axes[0].set_title('Given boreholes')
+        axes[0].set_xlabel('Distance (m)')
+        axes[0].set_xlim(-0.5-2, self.bs.shape[1] - 0.5 + 2)
+
+        # Second subplot
+        if self.uncertainty_data is None:
+            uncertainty = 1 - np.abs(self.prediction_data - 0.5) * 2
+            uncertainty_percent = uncertainty * 100
+        else:
+            uncertainty_percent = self.uncertainty_data
+
+        im2 = axes[1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100)
+        axes[1].set_title('% Uncertainty')
+        axes[1].set_xlabel('Distance (m)')
+        cbar = plt.colorbar(im2, ax=axes[1], orientation='horizontal', pad=0.2, fraction=0.046)
+        cbar.set_label('% Error')
+
+        # Third subplot
+        im3 = axes[2].imshow(np.round(self.prediction_data), cmap=cmap, vmin=0, vmax=9)
+        axes[2].set_title('Reconstructed model')
+        axes[2].set_xlabel('Distance (m)')
+        unique_values = np.unique(self.bs.ravel()[~np.isnan(self.bs.ravel())])
+        cmap_obj = im1.get_cmap()
+        norm = im1.norm
+        legend_handles = []
+        for idx, value in enumerate(unique_values):
+            color = cmap_obj(norm(value))
+            if int(value) < len(labels):
+                label = labels[int(value)]
+            else:
+                label = f'Unit {value}'
+            patch = mpatches.Patch(color=color, label=label)
+            legend_handles.append(patch)
+
+        # Place legend below the axis label
+        axes[0].legend(
+            handles=legend_handles,
+            title="Legend",
+            loc='upper center',
+            bbox_to_anchor=(0.5, -0.55),  # Move further down
+            ncol=len(unique_values)
+        )
+
+        # Align subplots on the top side
+        for ax in axes:
+            ax.set_anchor('N')
+
+        plt.subplots_adjust(wspace=0.15)
+        rcParams['pdf.fonttype'] = 42  # Ensures fonts are embedded as TrueType
+        plt.savefig(filename, format='pdf', bbox_inches='tight')
+        plt.show()    
+
+    def plot_model_with_validation(self,real, cmap='viridis', random_indices=None,labels=np.arange(0,100,1),filename='model.pdf'):
+        fig, axes = plt.subplots(2, 3, figsize=(14, 8), constrained_layout=True)
+        
+        
+        del1 = self.prediction_data.copy()
+        del1[np.isnan(real)] = np.nan
+
+        # First subplot
+        im1 = axes[0][0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9)
+        axes[0][0].set_ylabel('Depth (cm)')
+        axes[0][0].set_title('All boreholes')
+        axes[0][0].set_xlim(-0.5-2, self.bs.shape[1] - 0.5 + 2)
+
+        # Second subplot
+        if self.uncertainty_data is None:
+            uncertainty = 1 - np.abs(del1 - 0.5) * 2
+            uncertainty_percent = uncertainty * 100
+        else:
+            uncertainty_percent = self.uncertainty_data
+
+        im2 = axes[0][1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100)
+        axes[0][1].set_title('% Uncertainty')
+        axes[0][1].set_xlabel('Distance (m)')
+        axes[0][1].set_xlim(-0.5-2, self.bs.shape[1] - 0.5 + 2)
+        cbar = fig.colorbar(im2, ax=axes[0][1], orientation='vertical', pad=0.02, fraction=0.046)
+        cbar.set_label('% Error')
+
+        # Third subplot
+        axes[0][2].imshow(np.round(del1), cmap=cmap, vmin=0, vmax=9)
+        axes[0][2].set_title('Reconstructed model')
+        unique_values = np.unique(self.bs.ravel()[~np.isnan(self.bs.ravel())])
+
+        cmap_obj = im1.get_cmap()
+        norm = im1.norm
+        legend_handles = []
+        for idx, value in enumerate(unique_values):
+            color = cmap_obj(norm(value))
+            if int(value) < len(labels):
+                label = labels[int(value)]
+            else:
+                label = f'Unit {value}'
+            patch = mpatches.Patch(color=color, label=label)
+            legend_handles.append(patch)
+
+        axes[0][0].legend(handles=legend_handles, title="Legend",
+                        loc='upper left', bbox_to_anchor=(1.05, 1), ncol=1, frameon=True)
+
+        # Fourth subplot
+        axes[1][0].imshow(np.round(real), cmap=cmap, vmin=0, vmax=9)
+        axes[1][0].set_title('Real model')
+
+        # Validation/confusion matrix
+        if random_indices is None:
+            random_indices = np.arange(real.shape[1])
+        test_data = real[:, random_indices].ravel()
+        pred_data = del1[:, random_indices].ravel()
+        i_keep = np.where(np.isfinite(test_data))[0]
+        confusion_matrix = metrics.confusion_matrix(test_data[i_keep], pred_data[i_keep])
+        cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+        cm_display.plot(ax=axes[1][1], cmap=plt.cm.Blues, xticks_rotation=45, colorbar=False)
+        axes[1][1].set_title('Confusion Matrix')
+
+        tick_labels = [h.get_label() for h in legend_handles]
+        axes[1][1].set_xticks(np.arange(len(tick_labels)))
+        axes[1][1].set_yticks(np.arange(len(tick_labels)))
+        axes[1][1].set_xticklabels(tick_labels, rotation=45, ha='right')
+        axes[1][1].set_yticklabels(tick_labels)
+
+        # Hide unused subplot
+        axes[1][2].axis('off')
+        diff_binary = (np.round(real) != np.round(del1)).astype(int)
+        axes[1][2].imshow(diff_binary, cmap='gray', vmin=0, vmax=1)
+        axes[1][2].set_title('Binary Difference Mask')
+
+        #plt.tight_layout()
+        plt.savefig(filename, format='pdf', bbox_inches='tight')
+        plt.show()
+
+
+    def plot_model_with_validation_real(self,real, basis, del1, X, Y, tt, del_perc=None, cmap='viridis', random_indices=None,labels=np.arange(0,100,1),filename='model_with_validation.pdf'):
+
+        # Prepare polygon mask for topography
+        polygon = tt.T
+        points = np.c_[X.ravel(), Y.ravel()]
+        poly_path = Path(polygon)
+        inside = poly_path.contains_points(points)
+        inside_mask = inside.reshape(X.shape)
+        del1_plot = del1.copy()
+        del1_plot[~inside_mask] = np.nan
+        if del_perc is not None:
+            del_perc = del_perc.copy()
+            del_perc[~inside_mask] = np.nan
+
+        unique_values = np.unique(basis.ravel()[~np.isnan(basis.ravel())])
+
+        # Validation/confusion matrix
+        if random_indices is None:
+            random_indices = np.arange(real.shape[1])
+        test_data = real[:, random_indices].ravel()
+        test_data_plot = np.nan * np.ones_like(real)
+        pred_data_plot = np.nan * np.ones_like(real)
+        test_data_plot[:, random_indices] = real[:, random_indices]
+        pred_data_plot[:, random_indices] = del1_plot[:, random_indices]
+        pred_data = del1[:, random_indices].ravel()
+        i_keep = np.where(np.isfinite(test_data))[0]
+
+        # Set global style
+        plt.rcParams.update({'font.size': 14, 'axes.titlesize': 18, 'axes.labelsize': 16})
+
+        fig, axes = plt.subplots(4, 1, figsize=(18, 24), constrained_layout=True)
+
+        # Calculate common x-limits (min/max) for all subplots
+        x_min = np.nanmin(X)
+        x_max = np.nanmax(X)
+
+        # Plot 1: All boreholes and validation
+        im1 = axes[0].pcolor(X + 25, Y - 0.125, np.round(real), cmap=cmap, vmin=0, vmax=9, edgecolors='w', linewidths=1.0, shading='auto')
+        axes[0].pcolor(X + 25, Y - 0.125, np.round(test_data_plot), cmap=cmap, vmin=0, vmax=9, edgecolors='k', linewidths=1.0, shading='auto')
+        axes[0].set_ylabel('Elevation (m)')
+        axes[0].set_title('Boreholes used for inpainting - Boreholes used for validation')
+        axes[0].set_aspect('auto')
+        axes[0].set_xlim(x_min, x_max)
+        axes[0].grid(True, linestyle='--', alpha=0.5)
+        cmap_obj = im1.get_cmap()
+        norm = im1.norm
+        legend_handles = []
+        for idx, value in enumerate(unique_values):
+            color = cmap_obj(norm(value))
+            label = labels[int(value)] if int(value) < len(labels) else f'Unit {value}'
+            patch = mpatches.Patch(color=color, label=label)
+            legend_handles.append(patch)
+        axes[0].legend(handles=legend_handles, title="Legend", loc='upper left', bbox_to_anchor=(1.01, 1), ncol=1, frameon=True)
+
+        # Plot 2: Validation vs Prediction
+        axes[1].pcolor(X + 50, Y - 0.125, np.round(test_data_plot), cmap=cmap, vmin=0, vmax=9, edgecolors='k', linewidths=1.0, shading='auto')
+        axes[1].pcolor(X + 25, Y - 0.125, np.round(pred_data_plot), cmap=cmap, vmin=0, vmax=9, edgecolors='r', linewidths=1.0, shading='auto')
+        axes[1].set_ylabel('Elevation (m)')
+        axes[1].set_title('Validation boreholes - Predicted boreholes')
+        axes[1].set_aspect('auto')
+        axes[1].grid(True, linestyle='--', alpha=0.5)
+        # Add legend for validation and prediction
+        red_patch = mpatches.Patch(edgecolor='r', facecolor='none', linewidth=2, label='Prediction')
+        black_patch = mpatches.Patch(edgecolor='k', facecolor='none', linewidth=2, label='Validation')
+        axes[1].legend(handles=[red_patch, black_patch], loc='upper left', bbox_to_anchor=(1.01, 1), frameon=True)
+
+        # Plot 3: Reconstructed model
+        axes[2].pcolor(X, Y, np.round(del1_plot), cmap=cmap, vmin=0, vmax=9, edgecolors='w', linewidths=0.5, shading='auto')
+        axes[2].set_title('Reconstructed model')
+        axes[2].pcolor(X + 25, Y - 0.125, np.round(real), cmap=cmap, vmin=0, vmax=9, edgecolors='b', linewidths=0.5, shading='auto')
+        axes[2].pcolor(X + 25, Y - 0.125, np.round(pred_data_plot), cmap=cmap, vmin=0, vmax=9, edgecolors='r', linewidths=1.0, shading='auto')
+
+        axes[2].set_ylabel('Elevation (m)')
+        axes[2].set_aspect('auto')
+        axes[2].grid(True, linestyle='--', alpha=0.5)
+        # Add legend for validation and prediction
+        red_patch = mpatches.Patch(edgecolor='b', facecolor='none', linewidth=2, label='Data Used')
+        black_patch = mpatches.Patch(edgecolor='r', facecolor='none', linewidth=2, label='Prediction')
+        axes[2].legend(handles=[red_patch, black_patch], loc='upper left', bbox_to_anchor=(1.01, 1), frameon=True)
+
+
+        # Plot 4: Uncertainty
+        im2 = axes[3].pcolor(X, Y, del_perc, cmap='gist_gray', vmin=0, vmax=100, shading='auto')
+        axes[3].set_title('% Uncertainty')
+        axes[3].set_ylabel('Elevation (m)')
+        axes[3].set_xlabel('Distance (m)')
+        axes[3].set_aspect('auto')
+        axes[3].grid(True, linestyle='--', alpha=0.5)
+        cbar = fig.colorbar(im2, ax=axes[3], orientation='vertical', pad=0.02, fraction=0.04)
+        cbar.set_label('% Error')
+        cbar.ax.tick_params(labelsize=12)
+        rcParams['pdf.fonttype'] = 42  # Ensures fonts are embedded as TrueType
+        fig.savefig(filename, format="pdf", bbox_inches="tight")
+        # Confusion Matrix (only classes present in true or predicted labels)
+        present_true = np.unique(test_data[i_keep])
+        present_pred = np.unique(pred_data[i_keep])
+        present_classes = np.unique(np.concatenate([present_true, present_pred]))
+        # Remove nan and zero if not present
+        present_classes = present_classes[np.isfinite(present_classes)]
+        # Only keep classes with at least one true or predicted sample
+        mask_present = np.isin(test_data[i_keep], present_classes) | np.isin(pred_data[i_keep], present_classes)
+        # Get corresponding labels
+        present_labels = [labels[int(c)] if int(c) < len(labels) else f'Unit {c}' for c in present_classes]
+        fig_cm, ax_cm = plt.subplots(1, 1, figsize=(10, 10), constrained_layout=True)
+        confusion_matrix = metrics.confusion_matrix(
+            test_data[i_keep][mask_present], 
+            pred_data[i_keep][mask_present], 
+            labels=present_classes
+        )
+        cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+        cm_display.plot(ax=ax_cm, cmap=plt.cm.Blues, xticks_rotation=45, colorbar=False)
+        ax_cm.set_title('Confusion Matrix (Present Classes)', fontsize=18)
+        ax_cm.set_xticks(np.arange(len(present_labels)))
+        ax_cm.set_yticks(np.arange(len(present_labels)))
+        ax_cm.set_xticklabels(present_labels, rotation=45, ha='right', fontsize=14)
+        ax_cm.set_yticklabels(present_labels, fontsize=14)
+        ax_cm.grid(False)
+        fig_cm.savefig(filename[:-4]+'_validation.pdf', format="pdf", bbox_inches="tight")
+        plt.show()
