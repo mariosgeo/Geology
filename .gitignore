@@ -120,13 +120,31 @@ venv.bak/
 # mkdocs documentation
 /site
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Pyre type checker
-.pyre/
+# Backup files
+*_backup.*
+*_clean.*
+setup_backup.py
+setup_clean.py
+
+# Generated output files
+*.pdf
+data_line.xlsx
+data_small.xlsx
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+Thumbs.db
 
 # Scientific computing - exclude large data files
 # Essential small data files are kept (geotop.npy, top_layer.gpkg)
