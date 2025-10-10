@@ -1,0 +1,12 @@
+Base below surface;lithology
+2.2;Silty clay loam
+3.0;Sandy loam
+5.0;Sand
+7.0;Sandy loam
+9.5;clay
+12; sandy
+15; till
+30; sand
+
+
+

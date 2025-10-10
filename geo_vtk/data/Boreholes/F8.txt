@@ -1,0 +1,4 @@
+Base below surface;lithology
+0.3;Silty clay
+1.6; Sandy loam
+5.0; Loamy sand

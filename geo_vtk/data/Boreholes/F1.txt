@@ -1,0 +1,5 @@
+Base below surface;lithology
+2;Silty clay
+3; silty clay loam
+3.5; silty clay
+5: Sand
