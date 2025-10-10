@@ -1,6 +1,8 @@
 # Geology - Professional Geological Model Reconstruction Toolkit
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/Geology.svg)](https://badge.fury.io/py/Geology)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/Geology)](https://pypistats.org/packages/geology)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation Status](https://readthedocs.org/projects/geology/badge/?version=latest)](https://geology.readthedocs.io/en/latest/?badge=latest)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -65,64 +67,85 @@ Geology/
 └── 🧪 tests/                       # Automated testing suite
 ```
 
-## 🚀 Quick Start
+## � Installation
+
+### PyPI Package Available!
+
+**Geology** is now available on the Python Package Index (PyPI), making installation as simple as:
+
+```bash
+pip install Geology
+```
+
+This command installs the complete geological toolkit with all core dependencies. For specialized applications, optional dependencies are available through extras (see installation options below).
+
+## �🚀 Quick Start
 
 ### Prerequisites
 
 - **Python 3.8+**: Modern Python with scientific computing support
 - **Jupyter Notebook**: For interactive geological modeling workflows
-- **Git**: For repository management and version control
 
 ### Installation Options
 
-#### Option 1: Standard Installation
+#### Option 1: PyPI Installation (Recommended)
+```bash
+# Install from PyPI (simplest method)
+pip install Geology
+
+# Launch interactive notebook
+jupyter notebook demo.ipynb
+```
+
+#### Option 2: PyPI with Enhanced Features
+```bash
+# Install with visualization enhancements
+pip install Geology[visualization]
+
+# Install with geospatial capabilities  
+pip install Geology[geospatial]
+
+# Install with development tools
+pip install Geology[dev]
+
+# Install complete toolkit with all features
+pip install Geology[all]
+```
+
+#### Option 3: Development Installation from Source
 ```bash
 # Clone the repository
+git clone https://github.com/mariosgeo/Geology.git
+cd Geology
+
+# Install in development mode
+pip install -e .
+
+# Or install with development tools
+pip install -e .[dev]
+```
+
+#### Option 4: Manual Installation from Source
+```bash
+# Clone and set up from source
 git clone https://github.com/mariosgeo/Geology.git
 cd Geology
 
 # Install core dependencies
 pip install -r requirements.txt
 
-# Launch interactive notebook
-jupyter notebook demo.ipynb
-```
-
-#### Option 2: Development Installation
-```bash
-# Clone and set up development environment
-git clone https://github.com/mariosgeo/Geology.git
-cd Geology
-
-# Install with development tools
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-
-# Install package in development mode
-pip install -e .
-```
-
-#### Option 3: Enhanced Features
-```bash
-# Install with visualization enhancements
-pip install -r requirements-viz.txt
-
-# Install with geospatial capabilities  
-pip install -r requirements-geo.txt
-
-# Install complete toolkit
-pip install -r requirements.txt -r requirements-viz.txt -r requirements-geo.txt
+# Install package
+pip install .
 ```
 
 ### Quick Example
 
 ```python
+import geology
 import numpy as np
-from gridder import Geo_Gridder
-from geo_vtk import VtkClass
 
 # Create geological gridder
-geo_model = Geo_Gridder()
+geo_model = geology.create_geological_model()
 
 # Set up geological grid
 geo_model.make_grid(dx=1.0, dy=1.0)  # 1m resolution
@@ -134,11 +157,12 @@ geo_model.gridder()
 geo_model.one_vs_all(x_weight=1.0, y_weight=3.0)  # Anisotropic weights
 
 # Create 3D visualization
-vtk_converter = VtkClass()
+vtk_converter = geology.create_vtk_converter()
 vtk_converter.make_3d_grid_to_vtk('geological_model.vtk', 
                                   geo_model.prediction_data,
                                   x_coords, y_coords, z_coords)
 
+print(f"Geology package version: {geology.get_version()}")
 print(f"Geological model created with {geo_model.uncertainty:.2%} average uncertainty")
 ```
 
@@ -469,6 +493,33 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🛠️ Customization & Advanced Features
 
+### Package Import Methods
+
+The Geology package can be used in two ways depending on your installation method:
+
+#### Method 1: PyPI Installation (Recommended)
+```python
+import geology
+
+# Use convenience functions
+geo_model = geology.create_geological_model()
+vtk_converter = geology.create_vtk_converter()
+sample_data = geology.load_sample_data()
+
+print(f"Package version: {geology.get_version()}")
+```
+
+#### Method 2: Direct Module Import (Development)
+```python
+from gridder import Geo_Gridder
+from geo_vtk.src.vtkclass.VtkClass import VtkClass
+import geo_vtk.src.geo_utils as geo_utils
+
+# Direct class instantiation
+geo_model = Geo_Gridder()
+vtk_converter = VtkClass()
+```
+
 ### Adjusting Interpolation Weights
 
 ```python
@@ -605,7 +656,10 @@ Available for:
 
 [![Made with ❤️ for Geoscience](https://img.shields.io/badge/Made%20with%20%E2%9D%A4%EF%B8%8F%20for-Geoscience-blue)](https://github.com/mariosgeo/Geology)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://python.org)
+[![PyPI](https://img.shields.io/badge/PyPI-Available-brightgreen)](https://pypi.org/project/Geology/)
 [![VTK](https://img.shields.io/badge/VTK-3D%20Visualization-green)](https://vtk.org)
 [![Open Science](https://img.shields.io/badge/Open-Science-orange)](https://github.com/mariosgeo/Geology)
+
+**Now available on PyPI:** `pip install Geology`
 
 </div>
