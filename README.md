@@ -8,7 +8,7 @@
 > **A comprehensive Python toolkit for geological model reconstruction using advanced inpainting techniques and machine learning methods.**
 
 This repository contains a professional implementation for geological subsurface model reconstruction from sparse data using state-of-the-art computational methods. The toolkit combines biharmonic inpainting, machine learning classification, and uncertainty quantification to create robust geological models from incomplete datasets.
-
+![Geological Model](images/figure_3.svg)
 ## � Scientific Overview
 
 Geological subsurface characterization often faces the challenge of sparse and irregularly distributed data points. This toolkit addresses this fundamental problem by implementing advanced computational methods for geological model reconstruction:
