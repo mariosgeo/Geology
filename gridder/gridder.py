@@ -22,24 +22,40 @@ from matplotlib import ticker
 
 
 class Geo_Gridder:
-    def __init__(self,training_poins,training_data,method='mean'):
+    def __init__(self, training_points, training_data, method='mean'):
         """
-        Initialize gridder instance
+        Initialize the Geo_Gridder instance for geological data interpolation.
+
+        This class provides methods for gridding geological data onto regular grids,
+        with support for various interpolation methods including mean, mode, and 
+        biharmonic inpainting techniques.
 
         Parameters
         ----------
-        training_poins : Nx2 matrix
-            DESCRIPTION. The x,y coordinates of the data.
-        training_data : Nx! vector
-            DESCRIPTION. The value.
-        method : TYPE, optional
-            DESCRIPTION. The default is 'mean'.You can choose for the griider
-            "mean" or "average" ot "mode"
+        training_points : numpy.ndarray, shape (N, 2)
+            Array of x,y coordinates of the training data points.
+            Each row represents a point with [x, y] coordinates.
+        training_data : numpy.ndarray, shape (N,)
+            Values at the training points. Can be geological unit numbers,
+            resistivity values, or any other geological property.
+        method : str, optional
+            Interpolation method to use for gridding. Options are:
+            - 'mean' or 'average': Average values in each grid cell
+            - 'mode': Most frequent value in each grid cell (best for categorical data)
+            - 'data': Direct data assignment
+            Default is 'mean'.
 
-        Returns
-        -------
-        None.
+        Raises
+        ------
+        SystemExit
+            If the specified method is not supported.
 
+        Examples
+        --------
+        >>> import numpy as np
+        >>> points = np.array([[0, 0], [1, 1], [2, 0]])
+        >>> data = np.array([1, 2, 1])
+        >>> gridder = Geo_Gridder(points, data, method='mode')
         """
 
         
@@ -49,7 +65,7 @@ class Geo_Gridder:
 
             
         # define variables
-        self.training_points = training_poins  # training points
+        self.training_points = training_points  # training points
         self.training_data = training_data  # data at the training points
 #        self.int = []  # interpolation method
         self.prediction_points = []  # prediction points
@@ -69,41 +85,74 @@ class Geo_Gridder:
         
         return
         
-    def mode(self,df, key_cols, value_col, count_col):
-        '''                                                                                                                                                                                                                                                                                                                                                              
-        Pandas does not provide a `mode` aggregation function                                                                                                                                                                                                                                                                                                            
-        for its `GroupBy` objects. This function is meant to fill                                                                                                                                                                                                                                                                                                        
-        that gap, though the semantics are not exactly the same.                                                                                                                                                                                                                                                                                                         
-    
-        The input is a DataFrame with the columns `key_cols`                                                                                                                                                                                                                                                                                                             
-        that you would like to group on, and the column                                                                                                                                                                                                                                                                                                                  
-        `value_col` for which you would like to obtain the mode.                                                                                                                                                                                                                                                                                                         
-    
-        The output is a DataFrame with a record per group that has at least one mode                                                                                                                                                                                                                                                                                     
-        (null values are not counted). The `key_cols` are included as columns, `value_col`                                                                                                                                                                                                                                                                               
-        contains a mode (ties are broken arbitrarily and deterministically) for each                                                                                                                                                                                                                                                                                     
-        group, and `count_col` indicates how many times each mode appeared in its group.                                                                                                                                                                                                                                                                                 
-        '''
+    def mode(self, df, key_cols, value_col, count_col):
+        """
+        Calculate the mode (most frequent value) for grouped data.
+        
+        Pandas does not provide a `mode` aggregation function for its `GroupBy` 
+        objects. This function fills that gap for geological data analysis where
+        the most common geological unit in a grid cell is often desired.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Input DataFrame containing the data to group and analyze.
+        key_cols : list of str
+            Column names to group by (e.g., grid cell identifiers).
+        value_col : str
+            Column name containing values for which to find the mode.
+        count_col : str
+            Name for the output column containing mode counts.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with one record per group containing the mode value
+            and its frequency count. Ties are broken arbitrarily but deterministically.
+
+        Examples
+        --------
+        >>> df = pd.DataFrame({'grid_id': [1, 1, 1, 2, 2], 
+        ...                    'geology': [1, 1, 2, 3, 3]})
+        >>> result = gridder.mode(df, ['grid_id'], 'geology', 'count')
+        """
         return df.groupby(key_cols + [value_col]).size() \
                  .to_frame(count_col).reset_index() \
                  .sort_values(count_col, ascending=False) \
                  .drop_duplicates(subset=key_cols)
     
-    def modes(self,df, key_cols, value_col, count_col):
-        '''                                                                                                                                                                                                                                                                                                                                                              
-        Pandas does not provide a `mode` aggregation function                                                                                                                                                                                                                                                                                                            
-        for its `GroupBy` objects. This function is meant to fill                                                                                                                                                                                                                                                                                                        
-        that gap, though the semantics are not exactly the same.                                                                                                                                                                                                                                                                                                         
-    
-        The input is a DataFrame with the columns `key_cols`                                                                                                                                                                                                                                                                                                             
-        that you would like to group on, and the column                                                                                                                                                                                                                                                                                                                  
-        `value_col` for which you would like to obtain the modes.                                                                                                                                                                                                                                                                                                        
-    
-        The output is a DataFrame with a record per group that has at least                                                                                                                                                                                                                                                                                              
-        one mode (null values are not counted). The `key_cols` are included as                                                                                                                                                                                                                                                                                           
-        columns, `value_col` contains lists indicating the modes for each group,                                                                                                                                                                                                                                                                                         
-        and `count_col` indicates how many times each mode appeared in its group.                                                                                                                                                                                                                                                                                        
-        '''
+    def modes(self, df, key_cols, value_col, count_col):
+        """
+        Calculate all modes (most frequent values) for grouped data.
+        
+        Similar to the `mode` function but returns all values that appear
+        with the highest frequency in each group, useful for geological
+        data where multiple units might have equal frequency.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Input DataFrame containing the data to group and analyze.
+        key_cols : list of str
+            Column names to group by (e.g., grid cell identifiers).
+        value_col : str
+            Column name containing values for which to find the modes.
+        count_col : str
+            Name for the output column containing mode counts.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame with records per group containing all mode values
+            as lists and their frequency counts. Groups with ties will
+            have multiple values in the value_col lists.
+
+        Examples
+        --------
+        >>> df = pd.DataFrame({'grid_id': [1, 1, 1, 1], 
+        ...                    'geology': [1, 1, 2, 2]})
+        >>> result = gridder.modes(df, ['grid_id'], 'geology', 'count')
+        """
         return df.groupby(key_cols + [value_col]).size() \
                  .to_frame(count_col).reset_index() \
                  .groupby(key_cols + [count_col])[value_col].unique() \
@@ -114,31 +163,51 @@ class Geo_Gridder:
     
     
     
-    def make_grid(self,xmin=None,xmax=None,
-                  ymin=None,ymax=None,dx=None,dy=None,pts=None ):
+    def make_grid(self, xmin=None, xmax=None, ymin=None, ymax=None, dx=None, dy=None, pts=None):
         """
-        Calls the make grid. Grid is based either on user input,
-        by providing custom xmin,xmax,ymin,ymax.
-        If they are not provided, then they will be based on the
-        input data.
+        Create a regular grid for geological data interpolation.
+        
+        Generates a regular grid based on either user-specified dimensions
+        or automatically determined from the training data extent. The grid
+        will be used for subsequent interpolation and visualization.
 
         Parameters
         ----------
-        xmin : FLOAT, optional
-            DESCRIPTION. Provide you own grid dimension. The default is None.
-        xmax : FLOAT, optional
-            DESCRIPTION. The default is None.
-        ymin : FLOAT, optional
-            DESCRIPTION. The default is None.
-        ymax : FLOAT, optional
-            DESCRIPTION. The default is None.
-        dx : FLOAT, optional
-            DESCRIPTION. The default is None.
+        xmin : float, optional
+            Minimum x-coordinate of the grid. If None, determined from training data.
+        xmax : float, optional
+            Maximum x-coordinate of the grid. If None, determined from training data.
+        ymin : float, optional
+            Minimum y-coordinate of the grid. If None, determined from training data.
+        ymax : float, optional
+            Maximum y-coordinate of the grid. If None, determined from training data.
+        dx : float, optional
+            Grid spacing in x-direction. Default is 1.0.
+        dy : float, optional
+            Grid spacing in y-direction. If None, defaults to dx.
+        pts : tuple of int, optional
+            Alternative grid specification as (ny, nx) number of points.
+            If provided, overrides dx/dy settings.
 
-        Returns
-        -------
-        None.
+        Attributes Set
+        --------------
+        self.xs : numpy.ndarray
+            X-coordinates of grid points.
+        self.ys : numpy.ndarray
+            Y-coordinates of grid points.
+        self.xg : numpy.ndarray
+            2D meshgrid of x-coordinates.
+        self.yg : numpy.ndarray
+            2D meshgrid of y-coordinates.
+        self.lin_index : numpy.ndarray
+            Linear indices mapping training points to grid cells.
+        self.df : pandas.DataFrame
+            DataFrame containing training data grouped by grid cell.
 
+        Examples
+        --------
+        >>> gridder.make_grid(dx=0.5, dy=0.5)  # 0.5m grid spacing
+        >>> gridder.make_grid(pts=(100, 150))  # 100x150 grid
         """
         
 
@@ -186,13 +255,33 @@ class Geo_Gridder:
 
     def gridder(self):
         """
-        Calls the gridder by method. Data are now gridded in the bs matrix.
-        Matrix count has the count values of the average data
+        Perform the actual gridding operation using the specified method.
+        
+        Applies the interpolation method (mean, mode, etc.) to aggregate
+        training data values within each grid cell. Results are stored
+        in the bs (gridded data) and count (number of samples) matrices.
 
-        Returns
-        -------
-        None.
+        Attributes Set
+        --------------
+        self.bs : numpy.ndarray
+            2D array containing the gridded geological data values.
+            Shape matches the grid dimensions (len(ys), len(xs)).
+        self.count : numpy.ndarray
+            2D array containing the number of data points contributing
+            to each grid cell.
 
+        Notes
+        -----
+        - For 'mean'/'average' method: Calculates arithmetic mean of values in each cell
+        - For 'mode' method: Finds most frequent value in each cell (best for categorical data)
+        - Empty grid cells are filled with NaN values
+        - Must call make_grid() before calling this method
+
+        Examples
+        --------
+        >>> gridder.make_grid(dx=1.0)
+        >>> gridder.gridder()
+        >>> print(gridder.bs.shape)  # Show gridded data dimensions
         """
 
 
@@ -230,28 +319,56 @@ class Geo_Gridder:
         return
         
         
-    def in_paint(self,external_polygon=None,no_x=1756,no_y=1027,buffer=25):
+    def in_paint(self, external_polygon=None, no_x=1756, no_y=1027, buffer=25):
         """
-        Inpaint the gridded data. 
+        Perform biharmonic inpainting on gridded geological data.
+        
+        Fills gaps in the gridded geological data using biharmonic inpainting,
+        which creates smooth interpolations suitable for geological structures.
+        Can be constrained to specific polygonal areas and uses memory-efficient
+        batch processing for large datasets.
 
         Parameters
         ----------
-        external_polygon : MATRIX, optional
-            DESCRIPTION. If you want to only inpaint in area defeined in the polygon.
-            The default is None.
-        no_x : TYPE, optional
-            DESCRIPTION. The default is 200. This depeneds on the memory availabe.
-            If it does not fit in memory, we split the data in batches
-        no_y : TYPE, optional
-            DESCRIPTION. The default is 200. This depeneds on the memory availabe.
-            If it does not fit in memory, we split the data in batches
-        buffer : TYPE, optional
-            DESCRIPTION. The default is 25. This defines the overlay between
-            two batches
+        external_polygon : numpy.ndarray, optional
+            Polygon vertices defining the area to inpaint. If None, inpaints
+            the entire grid. Shape should be (N, 2) for N vertices.
+        no_x : int, optional
+            Maximum number of x-grid points processed in each batch.
+            Reduce if memory issues occur. Default is 1756.
+        no_y : int, optional
+            Maximum number of y-grid points processed in each batch.
+            Reduce if memory issues occur. Default is 1027.
+        buffer : int, optional
+            Overlap buffer between adjacent batches to ensure continuity.
+            Default is 25 grid points.
+
+        Attributes Set
+        --------------
+        self.bs : numpy.ndarray
+            Updated with inpainted values filling the gaps in the original
+            gridded data.
+
+        Notes
+        -----
+        - Uses scikit-image's biharmonic inpainting algorithm
+        - Processes data in batches for memory efficiency
+        - Maintains geological structure continuity across batch boundaries
+        - NaN values in the original grid are treated as areas to inpaint
+
+        Examples
+        --------
+        >>> gridder.make_grid(dx=1.0)
+        >>> gridder.gridder()
+        >>> gridder.in_paint()  # Inpaint entire grid
+        >>> # Or inpaint within polygon
+        >>> polygon = np.array([[0, 0], [10, 0], [10, 10], [0, 10]])
+        >>> gridder.in_paint(external_polygon=polygon)
+       
 
         Returns
-        -------
-        None.
+
+        None
 
         """
         # This is the mask to be inpainted. If no polygon provided, inpaint everywhere
@@ -389,6 +506,7 @@ class Geo_Gridder:
         None.
 
         """
+
         # This is the mask to be inpainted. If no polygon provided, inpaint everywhere
         mask=np.ones(self.xg.size)
 
@@ -446,6 +564,52 @@ class Geo_Gridder:
 
 
     def weighted_inpaint_biharmonic(self,image, mask, x_weight=1.0, y_weight=1.0):
+        """
+        Perform weighted biharmonic inpainting with different scaling in x and y directions.
+        
+        Applies biharmonic inpainting with anisotropic weights to handle geological
+        data that may have different resolution or correlation patterns in different
+        spatial directions. Useful for geological formations with preferential
+        orientations or when grid resolution differs between axes.
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            2D array containing the geological data to inpaint. NaN values
+            will be replaced with zeros before processing.
+        mask : numpy.ndarray
+            Boolean or binary mask where True/1 indicates areas to inpaint
+            and False/0 indicates known data areas.
+        x_weight : float, optional
+            Scaling weight for x-direction. Values > 1 compress x-axis,
+            < 1 expand x-axis during inpainting. Default is 1.0.
+        y_weight : float, optional
+            Scaling weight for y-direction. Values > 1 compress y-axis,
+            < 1 expand y-axis during inpainting. Default is 1.0.
+
+        Returns
+        -------
+        numpy.ndarray
+            2D array with inpainted values, cropped to original image shape.
+
+        Notes
+        -----
+        - Uses scipy.ndimage.zoom for anisotropic scaling
+        - Performs inpainting on scaled domain then rescales back
+        - Handles potential rounding issues by cropping to original shape
+        - Particularly useful for geological data with directional anisotropy
+
+        Examples
+        --------
+        >>> # Favor x-direction interpolation (common in layered geology)
+        >>> result = gridder.weighted_inpaint_biharmonic(
+        ...     image, mask, x_weight=0.5, y_weight=1.0)
+        >>> 
+        >>> # Favor y-direction interpolation
+        >>> result = gridder.weighted_inpaint_biharmonic(
+        ...     image, mask, x_weight=1.0, y_weight=0.5)
+        """
+
         image[np.isnan(image)] = 0  # Replace NaNs with zeros for inpainting
         #mask = make_mask(image)  # Create a mask where the image is NaN
         # Compute zoom factors (inverse of weights)
@@ -483,6 +647,62 @@ class Geo_Gridder:
         return inpainted
 
     def one_vs_all(self,image=None, x_weight=1.0, y_weight=3.0,external_polygon=None):
+        """
+        Perform probabilistic geological classification using one-vs-all inpainting.
+        
+        Reconstructs missing geological unit classifications by treating each unique
+        geological class as a binary classification problem. For each class, creates
+        a binary mask and performs weighted biharmonic inpainting, then combines
+        results probabilistically to determine the most likely geological unit.
+
+        Parameters
+        ----------
+        image : numpy.ndarray, optional
+            2D array of geological unit classifications. If None, uses self.bs.
+            Should contain integer labels representing different geological units.
+        x_weight : float, optional
+            Weighting factor for x-direction interpolation. Default is 1.0.
+        y_weight : float, optional
+            Weighting factor for y-direction interpolation. Default is 3.0,
+            favoring vertical geological continuity.
+        external_polygon : numpy.ndarray, optional
+            Polygon vertices to constrain inpainting area. If None, processes
+            entire grid. Shape should be (N, 2) for N vertices.
+
+        Attributes Set
+        --------------
+        self.bs : numpy.ndarray
+            Updated with the input image if provided.
+        self.prediction_data : numpy.ndarray
+            Final classified grid with most probable geological units.
+        self.uncertainty : numpy.ndarray
+            Uncertainty measure based on probability distribution entropy.
+
+        Returns
+        -------
+        numpy.ndarray
+            2D array containing the reconstructed geological unit classifications.
+
+        Notes
+        -----
+        - Each geological unit is treated as a separate binary classification
+        - Probabilities are normalized across all classes at each grid point
+        - Final classification uses argmax of probability distributions
+        - Uncertainty is calculated from probability distribution spread
+        - Particularly effective for geological units with clear boundaries
+
+        Examples
+        --------
+        >>> # Standard geological classification
+        >>> result = gridder.one_vs_all()
+        >>> 
+        >>> # With custom weights favoring horizontal continuity
+        >>> result = gridder.one_vs_all(x_weight=3.0, y_weight=1.0)
+        >>> 
+        >>> # With constraint polygon
+        >>> polygon = np.array([[0, 0], [10, 0], [10, 10], [0, 10]])
+        >>> result = gridder.one_vs_all(external_polygon=polygon)
+        """
         
         if image is None:
             image=self.bs
@@ -643,6 +863,48 @@ class Geo_Gridder:
     
 
     def plot_model(self, cmap='viridis',filename='model.pdf',labels=np.arange(0,100,1)):
+        """
+        Create a comprehensive visualization of geological model results.
+        
+        Generates a three-panel figure showing the original borehole data,
+        uncertainty estimates, and final inpainted geological model. Useful
+        for quality assessment and geological interpretation of results.
+
+        Parameters
+        ----------
+        cmap : str, optional
+            Matplotlib colormap name for geological unit visualization.
+            Default is 'viridis'. Common geological colormaps include
+            'tab10', 'Set3', or custom geological color schemes.
+        filename : str, optional
+            Output filename for saved figure. Default is 'model.pdf'.
+            Supports various formats (.pdf, .png, .jpg, .svg).
+        labels : numpy.ndarray, optional
+            Array of geological unit labels for colorbar tickmarks.
+            Default is np.arange(0, 100, 1).
+
+        Notes
+        -----
+        Creates three subplots:
+        1. Original borehole/training data (self.bs)
+        2. Uncertainty map (percentage confidence)
+        3. Final inpainted geological model (self.prediction_data)
+        
+        Saves figure to specified filename and displays if interactive.
+        Requires matplotlib for visualization.
+
+        Examples
+        --------
+        >>> # Basic geological model plot
+        >>> gridder.plot_model()
+        >>> 
+        >>> # Custom colormap and filename
+        >>> gridder.plot_model(cmap='tab10', filename='geology_result.png')
+        >>> 
+        >>> # With specific geological unit labels
+        >>> units = np.array([1, 2, 3, 4, 5])  # Geological formation IDs
+        >>> gridder.plot_model(labels=units, filename='formations.pdf')
+        """
         fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=False)
 
         # First subplot
