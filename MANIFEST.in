@@ -1,0 +1,26 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include requirements*.txt
+include pyproject.toml
+include *.npy
+include *.gpkg
+
+# Include gridder module
+recursive-include gridder *.py
+
+# Include geo_vtk module
+recursive-include geo_vtk *.py
+recursive-include geo_vtk/src *.py
+recursive-include geo_vtk/src/vtkclass *.py
+
+# Include data files
+recursive-include geo_vtk/data *.vtk *.txt *.csv *.xyz *.asc *.xml *.prj *.shp *.dbf *.shx *.cpg *.sbn *.sbx *.xlsx *.pdf *.png *.jpg
+
+# Exclude unnecessary files
+global-exclude *.pyc
+global-exclude __pycache__/*
+global-exclude .git/*
+global-exclude .vscode/*
+global-exclude *.egg-info/*

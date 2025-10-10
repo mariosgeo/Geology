@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "geology-inpainting"
+name = "Geology"
 dynamic = ["version"]
 description = "Professional geological model reconstruction using advanced inpainting techniques"
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {text = "MIT"}
 authors = [
     {name = "Marios Karaoulis", email = "marios.karaoulis@example.com"},
 ]
