@@ -1,0 +1,252 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geology-inpainting"
+dynamic = ["version"]
+description = "Professional geological model reconstruction using advanced inpainting techniques"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Marios Karaoulis", email = "marios.karaoulis@example.com"},
+]
+maintainers = [
+    {name = "Marios Karaoulis", email = "marios.karaoulis@example.com"},
+]
+keywords = [
+    "geology",
+    "geophysics", 
+    "inpainting",
+    "machine-learning",
+    "geological-modeling",
+    "biharmonic-interpolation",
+    "subsurface",
+    "borehole-data",
+    "geological-reconstruction",
+    "earth-science",
+    "spatial-analysis",
+    "geological-uncertainty",
+    "one-vs-all"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9", 
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+    "matplotlib>=3.5.0",
+    "scipy>=1.8.0",
+    "pandas>=1.4.0",
+    "scikit-image>=0.19.0",
+    "scikit-learn>=1.1.0",
+    "geopandas>=0.11.0",
+    "shapely>=1.8.0",
+    "vtk>=9.0.0",
+    "alphashape>=1.3.0",
+    "descartes>=1.1.0",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.0.0",
+    "openpyxl>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=3.0.0", 
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "isort>=5.10.0",
+    "sphinx>=4.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "nbsphinx>=0.8.0",
+    "pre-commit>=2.15.0",
+    "ipdb>=0.13.0",
+    "memory-profiler>=0.60.0",
+]
+visualization = [
+    "pyvista>=0.36.0",
+    "mayavi>=4.7.0",
+    "plotly>=5.0.0",
+    "seaborn>=0.11.0",
+    "holoviews>=1.14.0",
+    "bokeh>=2.4.0",
+    "ipywidgets>=7.6.0",
+]
+geospatial = [
+    "rasterio>=1.3.0",
+    "xarray>=0.20.0",
+    "contextily>=1.2.0",
+    "folium>=0.12.0",
+    "cartopy>=0.20.0",
+    "pyproj>=3.3.0",
+    "fiona>=1.8.0",
+]
+ml = [
+    "tensorflow>=2.8.0",
+    "torch>=1.11.0",
+    "xgboost>=1.6.0",
+    "lightgbm>=3.3.0",
+]
+all = [
+    "geology-inpainting[dev,visualization,geospatial,ml]"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mariosgeo/Geology"
+"Documentation" = "https://github.com/mariosgeo/Geology/wiki"
+"Repository" = "https://github.com/mariosgeo/Geology"
+"Bug Tracker" = "https://github.com/mariosgeo/Geology/issues"
+"Changelog" = "https://github.com/mariosgeo/Geology/blob/main/CHANGELOG.md"
+"Research Paper" = "https://doi.org/10.1000/example"
+
+[project.scripts]
+geology-inpaint = "geology.cli:main"
+geo-reconstruct = "geology.reconstruction:main"
+
+[tool.setuptools]
+packages = ["geology", "gridder", "geo_vtk"]
+
+[tool.setuptools.package-data]
+geology = [
+    "*.npy",
+    "*.csv", 
+    "*.xlsx",
+    "*.gpkg",
+    "images/*.svg",
+    "images/*.png",
+]
+
+[tool.setuptools_scm]
+write_to = "geology/_version.py"
+
+# Development tools configuration
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | geo_vtk/data
+  | images
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["geology", "gridder", "geo_vtk"]
+known_third_party = [
+    "numpy", "pandas", "matplotlib", "scipy", 
+    "sklearn", "skimage", "geopandas", "shapely", "vtk"
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--cov=geology",
+    "--cov=gridder", 
+    "--cov=geo_vtk",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "geological: marks tests requiring geological validation",
+]
+
+[tool.coverage.run]
+source = ["geology", "gridder", "geo_vtk"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+    "*/demo_*",
+    "*/data/*",
+    "*/_version.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Relaxed for scientific code
+ignore_missing_imports = true
+exclude = [
+    "geo_vtk/data/",
+    "images/",
+    "tests/",
+]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503", "E501"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build",
+    "dist", 
+    ".eggs",
+    "*.egg",
+    "geo_vtk/data",
+    "images",
+]
+per-file-ignores = [
+    # Allow longer lines in Jupyter notebooks and demo files
+    "*.ipynb:E501",
+    "*demo*.py:E501",
+]

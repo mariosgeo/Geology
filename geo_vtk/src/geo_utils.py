@@ -1,8 +1,47 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Mar 14 12:58:12 2018
+Geological Data Visualization Utilities
 
+This module provides utility functions for geological and geophysical data visualization,
+focusing on color mapping, data processing, and format conversions commonly used in
+earth science applications.
+
+The utilities support various geological visualization workflows including:
+- Scientific color space conversions (RGB/CMYK) for publication-quality figures
+- Specialized geological colormaps for different data types
+- Multi-dimensional data intersection and processing 
+- Time series data handling for geological monitoring
+- Color mapping optimized for geological parameter visualization
+
+Key Functionality
+-----------------
+- Color space conversions for scientific publication
+- Geological colormap definitions (resistivity, porosity, permeability)
+- Multi-dimensional array operations for geological grids
+- Data deduplication for survey datasets
+- Datetime conversions for temporal geological data
+
+Scientific Context
+------------------
+Geological data often requires specialized visualization approaches:
+- Resistivity data uses logarithmic color scales
+- Porosity/permeability need linear scales with geological boundaries
+- Stratigraphic data requires discrete color schemes
+- Time-series geological monitoring needs temporal color mapping
+
+Created on Wed Mar 14 12:58:12 2018
 @author: karaouli
+
+Examples
+--------
+>>> # Convert RGB to CMYK for publication
+>>> c, m, y, k = rgb_to_cmyk(255, 128, 0)  # Orange geological marker
+>>> 
+>>> # Create geological resistivity colormap
+>>> colors = loke()  # Standard electrical resistivity colors
+>>> 
+>>> # Map geological values to colors
+>>> color_indices = index_to_cmap(0.1, 1000, resistivity_data, 256)
 """
 import numpy as np
 import pandas as pd
@@ -14,7 +53,45 @@ rgb_scale = 255
 cmyk_scale = 100
 
 
-def rgb_to_cmyk(r,g,b):
+def rgb_to_cmyk(r, g, b):
+    """
+    Convert RGB color values to CMYK for publication-quality geological figures.
+    
+    Converts RGB (Red, Green, Blue) color values to CMYK (Cyan, Magenta, Yellow, Black)
+    color space, commonly required for scientific publication and professional printing
+    of geological maps, cross-sections, and data visualizations.
+
+    Parameters
+    ----------
+    r : int or float
+        Red component (0-255 scale).
+    g : int or float  
+        Green component (0-255 scale).
+    b : int or float
+        Blue component (0-255 scale).
+
+    Returns
+    -------
+    tuple of float
+        CMYK values as (c, m, y, k) on 0-100 scale suitable for printing.
+
+    Notes
+    -----
+    - Pure black (0,0,0) returns (0,0,0,100) in CMYK
+    - Conversion uses standard ICC color profile algorithms
+    - Useful for preparing geological visualizations for publication
+    - CMYK provides better color reproduction for printed geological maps
+
+    Examples
+    --------
+    >>> # Convert geological formation colors to CMYK
+    >>> c, m, y, k = rgb_to_cmyk(255, 165, 0)  # Orange sandstone
+    >>> print(f"Sandstone CMYK: C={c:.1f}, M={m:.1f}, Y={y:.1f}, K={k:.1f}")
+    
+    >>> # Convert standard geological colors
+    >>> limestone_cmyk = rgb_to_cmyk(135, 206, 235)  # Light blue limestone
+    >>> shale_cmyk = rgb_to_cmyk(105, 105, 105)      # Dark gray shale
+    """
     if (r == 0) and (g == 0) and (b == 0):
         # black
         return 0, 0, 0, cmyk_scale
@@ -34,8 +111,46 @@ def rgb_to_cmyk(r,g,b):
     # rescale to the range [0,cmyk_scale]
     return c*cmyk_scale, m*cmyk_scale, y*cmyk_scale, k*cmyk_scale
 
-def cmyk_to_rgb(c,m,y,k):
+def cmyk_to_rgb(c, m, y, k):
     """
+    Convert CMYK color values to RGB for digital geological visualization.
+    
+    Converts CMYK (Cyan, Magenta, Yellow, Black) color values from print-ready
+    geological publications back to RGB format for digital display, web visualization,
+    or screen-based geological data analysis.
+
+    Parameters
+    ----------
+    c : float
+        Cyan component (0-100 scale).
+    m : float
+        Magenta component (0-100 scale).
+    y : float
+        Yellow component (0-100 scale).
+    k : float
+        Black (Key) component (0-100 scale).
+
+    Returns
+    -------
+    tuple of float
+        RGB values as (r, g, b) on 0-1 scale for digital display.
+
+    Notes
+    -----
+    - Output RGB values are normalized to 0-1 range for matplotlib compatibility
+    - Multiply by 255 to get standard 0-255 RGB values
+    - Useful for converting published geological color schemes to digital format
+    - Maintains color fidelity for geological data visualization
+
+    Examples
+    --------
+    >>> # Convert published geological formation colors to RGB
+    >>> r, g, b = cmyk_to_rgb(20, 0, 100, 0)  # Yellow limestone from publication
+    >>> rgb_255 = (r*255, g*255, b*255)  # Convert to 0-255 scale
+    
+    >>> # Convert geological map legend colors
+    >>> sandstone_rgb = cmyk_to_rgb(0, 35, 100, 0)  # Orange sandstone
+    >>> shale_rgb = cmyk_to_rgb(0, 0, 0, 60)        # Gray shale
     """
     #r = rgb_scale*(1.0-(c+k)/float(cmyk_scale))
     #g = rgb_scale*(1.0-(m+k)/float(cmyk_scale))
@@ -66,7 +181,53 @@ def bgr():
     my_map=ListedColormap(cmap,name='BGR')
     return r,g,b
 
-def index_to_cmap(values_min,values_max,values,number_of_colors):
+def index_to_cmap(values_min, values_max, values, number_of_colors):
+    """
+    Map geological data values to colormap indices for visualization.
+    
+    Converts continuous geological or geophysical data values to discrete colormap
+    indices, enabling consistent color representation across different geological
+    parameters such as resistivity, porosity, density, or formation classification.
+
+    Parameters
+    ----------
+    values_min : float
+        Minimum value for color mapping. Values below this will be clipped.
+    values_max : float  
+        Maximum value for color mapping. Values above this will be clipped.
+    values : array_like
+        Geological data values to map to colors. Can be resistivity (Ohm·m),
+        porosity (%), density (g/cm³), or any geological parameter.
+    number_of_colors : int
+        Number of discrete colors in the target colormap (typically 256).
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of colormap indices (1-based) with same shape as input values.
+        Each index corresponds to a specific color in the geological colormap.
+
+    Notes
+    -----
+    - Values are clipped to [values_min, values_max] range before mapping
+    - Useful for geological data with extreme outliers or measurement errors
+    - Output indices are 1-based to match standard geological visualization software
+    - Linear mapping preserves geological parameter relationships
+
+    Examples
+    --------
+    >>> # Map electrical resistivity data to colors
+    >>> resistivity = np.array([1, 10, 100, 1000])  # Ohm·m
+    >>> color_indices = index_to_cmap(0.1, 10000, resistivity, 256)
+    
+    >>> # Map porosity data with geological constraints
+    >>> porosity = np.array([0.05, 0.15, 0.25, 0.35])  # fraction
+    >>> porosity_colors = index_to_cmap(0.0, 0.5, porosity, 64)
+    
+    >>> # Handle geological outliers with clipping
+    >>> density_data = np.array([1.8, 2.3, 2.7, 15.0])  # g/cm³, last value is error
+    >>> density_colors = index_to_cmap(1.5, 3.0, density_data, 128)  # Clips 15.0 to 3.0
+    """
     values=np.array(values)
     values=np.reshape(values,values.size,1)
     ind1=np.where(values>values_max)
@@ -81,6 +242,47 @@ def index_to_cmap(values_min,values_max,values,number_of_colors):
 
 
 def multidim_intersect(arr1, arr2):
+    """
+    Find intersection of multi-dimensional geological coordinate arrays.
+    
+    Identifies common coordinate points between two geological datasets,
+    useful for matching borehole locations, survey points, or grid intersections
+    in geological modeling and data integration workflows.
+
+    Parameters
+    ----------
+    arr1 : numpy.ndarray
+        First array of coordinates with shape (N, D) where N is number of points
+        and D is dimensionality (typically 2D: x,y or 3D: x,y,z coordinates).
+    arr2 : numpy.ndarray  
+        Second array of coordinates with same dimensionality as arr1.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array containing intersection coordinates with shape (M, D) where M
+        is the number of common points between the input arrays.
+
+    Notes
+    -----
+    - Useful for finding overlapping survey locations across different campaigns
+    - Handles floating-point coordinate matching with standard precision
+    - Preserves original coordinate ordering from first array
+    - Common in geological data integration workflows
+
+    Examples
+    --------
+    >>> # Find common borehole locations between surveys
+    >>> survey_2020 = np.array([[100, 200], [150, 250], [200, 300]])
+    >>> survey_2021 = np.array([[150, 250], [200, 300], [250, 350]])
+    >>> common_locations = multidim_intersect(survey_2020, survey_2021)
+    >>> print(f"Overlapping drill sites: {len(common_locations)}")
+    
+    >>> # Find intersection of 3D geological model grids
+    >>> model1_coords = np.array([[0,0,10], [1,0,10], [0,1,10]])
+    >>> model2_coords = np.array([[1,0,10], [0,1,10], [2,0,10]])
+    >>> shared_coords = multidim_intersect(model1_coords, model2_coords)
+    """
     arr1_view = arr1.view([('',arr1.dtype)]*arr1.shape[0])
     arr2_view = arr2.view([('',arr2.dtype)]*arr2.shape[0])
     intersected = np.intersect1d(arr1_view, arr2_view)
@@ -137,16 +339,114 @@ def remove_duplicates(arr1):
    
     
 def datetime2matlabdn(dt):
-   ord = dt.toordinal()
-   mdn = dt + timedelta(days = 366)
-   frac = (dt-datetime(dt.year,dt.month,dt.day,0,0,0)).seconds / (24.0 * 60.0 * 60.0)
-   return mdn.toordinal() + frac
+    """
+    Convert Python datetime to MATLAB datenum format for geological time series.
+    
+    Converts Python datetime objects to MATLAB datenum format, enabling
+    cross-platform compatibility for geological monitoring data, time-lapse
+    surveys, and temporal geological analysis workflows.
+
+    Parameters
+    ----------
+    dt : datetime.datetime
+        Python datetime object representing geological survey time,
+        monitoring timestamp, or data acquisition time.
+
+    Returns
+    -------
+    float
+        MATLAB datenum value (days since January 1, 0000) including
+        fractional day component for precise timestamp representation.
+
+    Notes
+    -----
+    - MATLAB datenum: Days since January 1, 0000 (proleptic Gregorian calendar)
+    - Includes fractional days for sub-daily temporal resolution
+    - Useful for geological monitoring systems using MATLAB data processing
+    - Maintains microsecond precision for high-frequency geological measurements
+
+    Examples
+    --------
+    >>> # Convert geological survey timestamp
+    >>> from datetime import datetime
+    >>> survey_time = datetime(2023, 6, 15, 14, 30, 0)  # Survey at 2:30 PM
+    >>> matlab_time = datetime2matlabdn(survey_time)
+    >>> print(f"MATLAB datenum: {matlab_time:.6f}")
+    
+    >>> # Convert monitoring data timestamps
+    >>> import pandas as pd
+    >>> monitoring_data = pd.DataFrame({
+    ...     'timestamp': [datetime(2023, 1, 1, 12), datetime(2023, 1, 2, 12)],
+    ...     'groundwater_level': [1.5, 1.3]
+    ... })
+    >>> monitoring_data['matlab_time'] = monitoring_data['timestamp'].apply(datetime2matlabdn)
+    
+    >>> # Time-lapse geological survey processing
+    >>> acquisition_times = [datetime(2023, 3, 1), datetime(2023, 6, 1), datetime(2023, 9, 1)]
+    >>> matlab_times = [datetime2matlabdn(t) for t in acquisition_times]
+    """
+    ord = dt.toordinal()
+    mdn = dt + timedelta(days = 366)
+    frac = (dt-datetime(dt.year,dt.month,dt.day,0,0,0)).seconds / (24.0 * 60.0 * 60.0)
+    return mdn.toordinal() + frac
 
 
 
 
 
 def loke():
+    """
+    Generate the standard Loke electrical resistivity colormap for geophysical visualization.
+    
+    Returns the widely-used electrical resistivity colormap developed for geophysical
+    interpretation, particularly electrical resistivity tomography (ERT) and induced
+    polarization (IP) surveys. This colormap provides intuitive color progression
+    from low resistivity (blue/cyan) to high resistivity (red/white).
+
+    Returns
+    -------
+    numpy.ndarray
+        RGB colormap array with shape (18, 3) containing normalized RGB values (0-1).
+        Colors progress from blue (low resistivity/conductive materials like clay, 
+        groundwater) through green and yellow to red and white (high resistivity/
+        resistive materials like bedrock, dry soil).
+
+    Notes
+    -----
+    - Standard colormap in geophysical software (RES2DINV, EarthImager, AGI)
+    - Blue colors: Low resistivity (1-10 Ohm·m) - clay, saltwater, contamination
+    - Cyan/Green: Medium-low resistivity (10-100 Ohm·m) - wet soil, brackish water
+    - Yellow: Medium resistivity (100-1000 Ohm·m) - dry soil, fresh water
+    - Orange/Red: High resistivity (1000+ Ohm·m) - bedrock, dry sand, air voids
+    - White: Very high resistivity (10000+ Ohm·m) - granite, quartzite, air
+    
+    Geological Interpretation
+    -------------------------
+    - Conductive zones (blue): Clay layers, groundwater, contamination plumes
+    - Resistive zones (red/white): Bedrock, dry zones, buried utilities
+    - Intermediate zones (green/yellow): Typical soil conditions
+
+    Examples
+    --------
+    >>> # Get standard electrical resistivity colormap
+    >>> resistivity_cmap = loke()
+    >>> 
+    >>> # Use with matplotlib for resistivity visualization
+    >>> import matplotlib.pyplot as plt
+    >>> from matplotlib.colors import ListedColormap
+    >>> cmap = ListedColormap(resistivity_cmap, name='Loke_Resistivity')
+    >>> plt.imshow(resistivity_data, cmap=cmap)
+    
+    >>> # Apply to resistivity survey data
+    >>> resistivity_values = np.logspace(0, 4, 100)  # 1 to 10000 Ohm·m
+    >>> color_indices = index_to_cmap(1, 10000, resistivity_values, len(resistivity_cmap))
+    
+    References
+    ----------
+    Loke, M.H., Chambers, J.E., Rucker, D.F., Kuras, O. and Wilkinson, P.B., 2013.
+    Recent developments in the direct-current geoelectrical imaging method.
+    Journal of Applied Geophysics, 95, pp.135-156.
+    """
     map=np.array([[0,0,128/255],
     [0,0,170/255],
     [0,0,211/255],

@@ -1,0 +1,36 @@
+# Visualization Dependencies for Geology Package
+# Install with: pip install -r requirements-viz.txt
+
+# Advanced 3D visualization
+pyvista>=0.36.0                  # Modern VTK interface for 3D visualization
+mayavi>=4.7.0                    # Advanced 3D scientific visualization
+vtk>=9.2.0                       # Latest VTK library
+
+# Interactive plotting and web visualization
+plotly>=5.0.0                    # Interactive plotting with web support
+dash>=2.0.0                      # Interactive web applications
+bokeh>=2.4.0                     # Interactive visualization library
+
+# Enhanced statistical visualization
+seaborn>=0.11.0                  # Statistical data visualization
+holoviews>=1.14.0                # High-level data visualization
+datashader>=0.14.0               # Large dataset visualization
+
+# Specialized geological visualization
+bruges>=0.5.0                    # Geophysical visualization tools
+welly>=0.5.0                     # Well log visualization
+
+# Color mapping and palettes
+colorcet>=2.0.0                  # Perceptually uniform colormaps
+cmocean>=2.0.0                   # Oceanographic colormaps
+palettable>=3.3.0                # Color palette library
+
+# Animation and interactive features
+celluloid>=0.2.0                 # Matplotlib animation helper
+ipywidgets>=7.6.0                # Interactive widgets for Jupyter
+pythreejs>=2.3.0                 # 3D graphics in Jupyter
+
+# Export and rendering
+pillow>=9.0.0                    # Image processing and export
+imageio>=2.16.0                  # Image I/O with various formats
+ffmpeg-python>=0.2.0             # Video export capabilities

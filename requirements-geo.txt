@@ -1,0 +1,42 @@
+# Geospatial Dependencies for Geology Package  
+# Install with: pip install -r requirements-geo.txt
+
+# Enhanced raster data processing
+rasterio>=1.3.0                  # Raster data I/O (GeoTIFF, NetCDF, etc.)
+xarray>=0.20.0                   # N-dimensional labeled arrays
+netcdf4>=1.5.0                   # NetCDF file support
+h5py>=3.6.0                      # HDF5 file support
+
+# Web mapping and basemaps
+contextily>=1.2.0                # Web map tiles and basemaps
+folium>=0.12.0                   # Interactive web mapping
+leafmap>=0.9.0                   # Interactive mapping for geospatial analysis
+
+# Advanced geospatial analysis
+rioxarray>=0.11.0                # Rasterio extension for xarray
+geocube>=0.3.0                   # Rasterizing vector data
+regionmask>=0.9.0                # Create masks from regions
+
+# Coordinate reference systems
+cartopy>=0.20.0                  # Cartographic projections and geospatial data processing
+pyepsg>=0.4.0                    # EPSG coordinate system database
+
+# Spatial statistics and analysis
+libpysal>=4.6.0                  # Python spatial analysis library
+esda>=2.4.0                      # Exploratory spatial data analysis
+splot>=1.1.0                     # Spatial plotting
+
+# Geophysical data formats
+obspy>=1.3.0                     # Seismological data processing
+pygmt>=0.7.0                     # Python interface to GMT
+verde>=1.7.0                     # Gridding and interpolation
+
+# Remote sensing and satellite data
+sentinelsat>=1.1.0               # Sentinel satellite data access
+planetary-computer>=0.4.0        # Microsoft Planetary Computer access
+stackstac>=0.4.0                 # STAC data to xarray
+
+# Geological data formats
+lasio>=0.30                      # LAS well log file reader
+welly>=0.5.0                     # Well log analysis
+striplog>=0.9.0                  # Geological strip logs

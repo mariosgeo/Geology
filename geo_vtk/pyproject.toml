@@ -1,0 +1,199 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geovtk"
+dynamic = ["version"]
+description = "Professional geological VTK data visualization library"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Marios Karaoulis", email = "marios.karaoulis@example.com"},
+]
+maintainers = [
+    {name = "Marios Karaoulis", email = "marios.karaoulis@example.com"},
+]
+keywords = [
+    "geology",
+    "geophysics", 
+    "vtk",
+    "visualization",
+    "3d-modeling",
+    "geological-data",
+    "borehole",
+    "resistivity",
+    "geospatial",
+    "earth-science"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Visualization", 
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8", 
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "numpy>=1.18.0",
+    "pandas>=1.0.0", 
+    "matplotlib>=3.0.0",
+    "scipy>=1.4.0",
+    "GDAL>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.10.0",
+    "black>=21.0.0",
+    "flake8>=3.8.0",
+    "sphinx>=3.0.0",
+    "sphinx-rtd-theme",
+    "nbsphinx",
+]
+visualization = [
+    "mayavi>=4.7.0",
+    "pyvista>=0.30.0", 
+    "vtk>=9.0.0",
+]
+geospatial = [
+    "geopandas>=0.8.0",
+    "rasterio>=1.2.0",
+    "pyproj>=3.0.0",
+]
+all = [
+    "geovtk[dev,visualization,geospatial]"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mariosgeo/Geology"
+"Documentation" = "https://github.com/mariosgeo/Geology/wiki"
+"Repository" = "https://github.com/mariosgeo/Geology"
+"Bug Tracker" = "https://github.com/mariosgeo/Geology/issues"
+"Changelog" = "https://github.com/mariosgeo/Geology/blob/main/CHANGELOG.md"
+
+[project.scripts]
+geovtk-convert = "geovtk.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*", "docs*", "examples*"]
+
+[tool.setuptools.package-data]
+geovtk = [
+    "data/*.txt",
+    "data/*.json",
+    "data/colormaps/*.txt", 
+    "examples/*.py",
+]
+
+[tool.setuptools_scm]
+write_to = "src/geovtk/_version.py"
+
+# Development tools configuration
+[tool.black]
+line-length = 88
+target-version = ['py37', 'py38', 'py39', 'py310', 'py311'] 
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["geovtk"]
+known_third_party = ["numpy", "pandas", "matplotlib", "scipy", "osgeo"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config", 
+    "--verbose",
+    "--cov=geovtk",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["src/geovtk"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError", 
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "docs/source/conf.py",
+    "old",
+    "build", 
+    "dist",
+    ".eggs",
+    "*.egg",
+]
