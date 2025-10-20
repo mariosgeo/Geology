@@ -18,11 +18,42 @@ import matplotlib.patches as mpatches
 from sklearn import metrics
 from matplotlib.path import Path
 from matplotlib import ticker
-#import 
+from sklearn.decomposition import PCA
+from scipy.spatial import cKDTree
+from matplotlib.colors import ListedColormap
+import alphashape
 
+
+#import 
+map=np.array([[200,200,200], #anthropogenic
+		[157,78,64], #peat
+		[0,146,0], #clay
+		[194,207,92], #silty
+		[255,255,255], #nothing
+		[255,255,0], # sand
+		[243,225,6], # medium
+		[231,195,22], #coarse
+		[216,163,32], #gravel
+		[95,95,255]]) #shells
+map=map/255
+my_map=ListedColormap(map,name='IMOD')
+
+# Define labels globally so they are accessible from all functions
+labels = np.array([
+	'anthropogenic',
+	'peat',
+	'clay',
+	'silt',
+	'nothing',
+	'sand',
+	'sand (m)',
+	'sand (c)',
+	'gravel',
+	'shells'
+])
 
 class Geo_Gridder:
-    def __init__(self, training_points, training_data, method='mean'):
+    def __init__(self, training_points, training_data, method='mean',prepare_data='no',boreholes=None,plot='No',alpha=None):
         """
         Initialize the Geo_Gridder instance for geological data interpolation.
 
@@ -82,9 +113,125 @@ class Geo_Gridder:
         self.count=[]
         # self.bs2=[]
         self.uncertainty_data=[] # uncertainty model at the prediction points
-        
+
+        self.inital_boreholes=boreholes
+
+        self.alpha=alpha
+        if prepare_data=='yes' or prepare_data=='Yes' or prepare_data=='YES':
+            self.resample_boreholes()
+            self.project_boreholes_profile(plot=plot)
+
+            # assign actual x and elevation now on the 2d prodiles
+            self.training_points=np.vstack((self.resampled_boreholes['distance_along_profile'].values,self.resampled_boreholes['elev'].values-self.resampled_boreholes['depth'].values)).T
+            
+            self.training_data=self.resampled_boreholes['major_class']
+            # Map unique geology classes to unique integers
+            unique_classes, training_data_int = np.unique(self.training_data, return_inverse=True)
+            # Assign integer codes to each class based on their order in the labels array
+            # For each class in self.training_data, find its index in the global labels array
+            training_data_int = np.array([np.where(labels == v)[0][0] if v in labels else -1 for v in self.training_data])
+            # Optionally, warn if any class was not found
+            if np.any(training_data_int == -1):
+                print("Warning: Some classes in borehole data were not found in the global labels list.")
+
+
+            self.class_translation = {i: v for i, v in enumerate(unique_classes)}
+            self.class_translation_inv = {v: i for i, v in enumerate(unique_classes)}
+            self.training_data = training_data_int
+            print(self.class_translation_inv)
+
+    
         return
-        
+
+
+
+    def resample_boreholes(self,dz=0.05):
+        # data in boreholes come as from to to define a class. Since we want pixels, we need to resample
+        #first find uinque boreholes.
+        # dz should be smaller thnat the desired depth resoltuion we want to get from the profile. The actual depth is defiend later on the make_grid. Thus, leave a smaller (or much smaller number here).
+
+
+        unique_boreholes=self.inital_boreholes['x'].unique()
+        print('We found %d boreholes'%len(unique_boreholes))
+        print('We will interpolate on depth every %.2f'%dz)
+
+        # Create a new DataFrame with 10cm intervals for each formation
+        rows = []
+        interval = 0.05  # 1 cm
+        for idx, row in self.inital_boreholes.iterrows():
+            top = float(row['up'])
+            bottom = float(row['down'])
+            depths = np.arange(top, bottom, interval)
+            for d in depths:
+                new_row = row.copy()
+                new_row['depth'] = round(d, 2)
+                rows.append(new_row.drop(['up', 'down']))
+        for idx, row in self.inital_boreholes.iterrows():
+            top = float(row['up'])
+            bottom = float(row['down'])
+            depths = np.arange(top, bottom, interval)
+            for d in depths:
+                new_row = row.copy()
+                new_row['depth'] = round(d, 2)
+                rows.append(new_row.drop(['up', 'down']))
+
+        # Create the new DataFrame
+        tmp1_10cm = pd.DataFrame(rows).reset_index(drop=True)
+
+        # Reorder columns to have 'depth' as the first column
+        cols = ['depth'] + [col for col in tmp1_10cm.columns if col != 'depth']
+        self.resampled_boreholes = tmp1_10cm[cols]
+
+
+        return
+
+
+    def project_boreholes_profile(self,plot='No'):
+        # In this function, we will project the boreholes, along a profile that fits "most" of the boreholes
+        import scipy.interpolate
+
+        # Extract x and y coordinates from resampled boreholes
+        coords = self.resampled_boreholes[['x', 'y']].drop_duplicates().values
+
+        # Sort points by x (or use PCA for general orientation)
+        pca = PCA(n_components=1)
+        order = np.argsort(pca.fit_transform(coords).ravel())
+        coords_sorted = coords[order]
+
+        # Fit a smooth spline through the sorted points
+        tck, u = scipy.interpolate.splprep([coords_sorted[:, 0], coords_sorted[:, 1]], s=5)
+        # Evaluate spline at fine intervals
+        unew = np.linspace(0, 1, 1000)
+        x_spline, y_spline = scipy.interpolate.splev(unew, tck)
+
+        # For each borehole point, find the closest point on the spline and its distance along the curve
+
+        spline_points = np.vstack([x_spline, y_spline]).T
+        tree = cKDTree(spline_points)
+        distances, idx = tree.query(self.resampled_boreholes[['x', 'y']].values)
+        # Calculate cumulative distance along the spline
+        deltas = np.diff(spline_points, axis=0)
+        arc_lengths = np.concatenate([[0], np.cumsum(np.linalg.norm(deltas, axis=1))])
+        # Assign arc length to each borehole point
+        self.resampled_boreholes['distance_along_profile'] = arc_lengths[idx]
+
+        if plot=='Yes' or plot=='yes' or plot=='YES':
+            plt.figure(figsize=(10, 6))
+            plt.plot(x_spline, y_spline, 'r-', label='Fitted Profile')
+            plt.scatter(coords[:, 0], coords[:, 1], c='blue', label='Boreholes')
+            for i, (x, y) in enumerate(coords):
+                plt.text(x, y, f'BH{i+1}', fontsize=9, ha='right')
+            plt.xlabel('X Coordinate')
+            plt.ylabel('Y Coordinate')
+            plt.title('Borehole Locations and Fitted Profile')
+            plt.legend()
+            plt.axis('equal')
+            plt.grid()
+            plt.show()
+
+
+
+
     def mode(self, df, key_cols, value_col, count_col):
         """
         Calculate the mode (most frequent value) for grouped data.
@@ -244,6 +391,12 @@ class Geo_Gridder:
         # make Dataframe with akk 
         self.df=pd.DataFrame({'values':self.training_data[ix],'ii':self.lin_index})
         
+
+         # calculate now the convex hull
+        if self.alpha is not None:
+               alpha_shape = alphashape.alphashape(self.training_points, self.alpha)
+               print(alpha_shape)
+               self.tt=np.array(alpha_shape.exterior.xy)
         
         return
 
@@ -740,6 +893,16 @@ class Geo_Gridder:
         self.prediction_data = del4
         self.uncertainty_data = del_perc
 
+        if self.alpha is not None:
+            # Prepare polygon mask for topography
+            polygon = self.tt.T
+            points = np.c_[self.xg.ravel(), self.yg.ravel()]
+            poly_path = Path(polygon)
+            inside = poly_path.contains_points(points)
+            inside_mask = inside.reshape(self.xg.shape)
+            
+            self.prediction_data[~inside_mask] = np.nan
+
         return 
 
     def plot_2D(self, output_name, validation=None, show=True):
@@ -952,7 +1115,7 @@ class Geo_Gridder:
             bbox_to_anchor=(0.5, -0.55),  # Move further down
             ncol=len(unique_values)
         )
-
+        print(unique_values)
         # Align subplots on the top side
         for ax in axes:
             ax.set_anchor('N')
