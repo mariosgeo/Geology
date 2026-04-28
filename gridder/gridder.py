@@ -1025,7 +1025,7 @@ class Geo_Gridder:
     
     
 
-    def plot_model(self, cmap='viridis',filename='model.pdf',labels=np.arange(0,100,1)):
+    def plot_model(self, cmap='viridis',filename='model.pdf',labels=np.arange(0,100,1),extent=None):
         """
         Create a comprehensive visualization of geological model results.
         
@@ -1069,13 +1069,14 @@ class Geo_Gridder:
         >>> gridder.plot_model(labels=units, filename='formations.pdf')
         """
         fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=False)
-
+        if extent is None:
+            extent = [self.xs[0], self.xs[-1], self.ys[-1], self.ys[0]]
         # First subplot
-        im1 = axes[0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9)
+        im1 = axes[0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9,extent=extent)
         axes[0].set_ylabel('Depth (m)')
         axes[0].set_title('Given boreholes')
         axes[0].set_xlabel('Distance (m)')
-        axes[0].set_xlim(-0.5-2, self.bs.shape[1] - 0.5 + 2)
+        #axes[0].set_xlim(-0.5-2, self.bs.shape[1] - 0.5 + 2)
 
         # Second subplot
         if self.uncertainty_data is None:
@@ -1084,14 +1085,14 @@ class Geo_Gridder:
         else:
             uncertainty_percent = self.uncertainty_data
 
-        im2 = axes[1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100)
+        im2 = axes[1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100,extent=extent)
         axes[1].set_title('% Uncertainty')
         axes[1].set_xlabel('Distance (m)')
         cbar = plt.colorbar(im2, ax=axes[1], orientation='horizontal', pad=0.2, fraction=0.046)
         cbar.set_label('% Error')
 
         # Third subplot
-        im3 = axes[2].imshow(np.round(self.prediction_data), cmap=cmap, vmin=0, vmax=9)
+        im3 = axes[2].imshow(np.round(self.prediction_data), cmap=cmap, vmin=0, vmax=9,extent=extent)
         axes[2].set_title('Reconstructed model')
         axes[2].set_xlabel('Distance (m)')
         unique_values = np.unique(self.bs.ravel()[~np.isnan(self.bs.ravel())])
