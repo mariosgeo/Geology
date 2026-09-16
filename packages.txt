@@ -1,2 +1,6 @@
 gdal-bin
 libgdal-dev
+libgeos-dev
+libproj-dev
+libgl1
+libglib2.0-0

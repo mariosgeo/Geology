@@ -48,11 +48,12 @@ openpyxl>=3.0.0                  # Excel file reading and writing
 xlrd>=2.0.0                      # Excel file reading (legacy support)
 
 # =============================================================================
-# Optional Enhanced Visualization (install separately if needed)
+# Web Application and Interactive Visualization
 # =============================================================================
+streamlit>=1.30.0                # Web application framework
+plotly>=5.10.0                   # Interactive plotting and web visualization
 # pyvista>=0.36.0                # Modern VTK interface for 3D visualization
 # mayavi>=4.7.0                  # Advanced 3D scientific visualization
-# plotly>=5.0.0                  # Interactive plotting and web visualization
 # seaborn>=0.11.0                # Statistical data visualization
 
 # =============================================================================
