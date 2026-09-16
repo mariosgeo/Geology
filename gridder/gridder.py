@@ -1070,7 +1070,10 @@ class Geo_Gridder:
         """
         fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=False)
         if extent is None:
-            extent = [self.xs[0], self.xs[-1], self.ys[-1], self.ys[0]]
+            im1 = axes[0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9)
+        else:
+            im1 = axes[0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9,extent=extent)
+            
         # First subplot
         im1 = axes[0].imshow(self.bs, cmap=cmap, vmin=0, vmax=9,extent=extent)
         axes[0].set_ylabel('Depth (m)')
@@ -1085,14 +1088,20 @@ class Geo_Gridder:
         else:
             uncertainty_percent = self.uncertainty_data
 
-        im2 = axes[1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100,extent=extent)
+        if extent is None:
+            im2 = axes[1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100)
+        else:
+            im2 = axes[1].imshow(uncertainty_percent, cmap='gist_gray', vmin=0, vmax=100,extent=extent)
         axes[1].set_title('% Uncertainty')
         axes[1].set_xlabel('Distance (m)')
         cbar = plt.colorbar(im2, ax=axes[1], orientation='horizontal', pad=0.2, fraction=0.046)
         cbar.set_label('% Error')
 
         # Third subplot
-        im3 = axes[2].imshow(np.round(self.prediction_data), cmap=cmap, vmin=0, vmax=9,extent=extent)
+        if extent is None:
+            im3 = axes[2].imshow(np.round(self.prediction_data), cmap=cmap, vmin=0, vmax=9)
+        else:   
+            im3 = axes[2].imshow(np.round(self.prediction_data), cmap=cmap, vmin=0, vmax=9,extent=extent)
         axes[2].set_title('Reconstructed model')
         axes[2].set_xlabel('Distance (m)')
         unique_values = np.unique(self.bs.ravel()[~np.isnan(self.bs.ravel())])

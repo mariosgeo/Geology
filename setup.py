@@ -47,6 +47,7 @@ EXTRAS_REQUIRE = {
         'mayavi>=4.7.0',
         'pyvista>=0.30.0',
         'plotly>=5.0.0',
+        'streamlit>=1.20.0',
         'seaborn>=0.11.0',
     ],
     'geospatial': [
@@ -85,7 +86,7 @@ setup(
     },
     
     # Package discovery and content
-    packages=find_packages(include=['geology', 'geology.*']),
+    packages=find_packages(include=['geology', 'geology.*', 'gridder', 'gridder.*', 'streamlit_app', 'streamlit_app.*']),
     include_package_data=True,
     
     # Dependencies
